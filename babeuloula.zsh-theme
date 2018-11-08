@@ -88,9 +88,7 @@ prompt_end() {
 
 # Context: user@hostname (who am I and where am I)
 prompt_context() {
-  if [ "$USER" != "$DEFAULT_USER" ]; then
-    prompt_segment white black "%(!.%{%F{yellow}%}.)%n"
-  fi
+  prompt_segment white black "%(!.%{%F{yellow}%}.)%n"
 }
 
 # Git: branch/detached head, dirty status
