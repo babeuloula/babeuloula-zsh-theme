@@ -125,6 +125,13 @@ prompt_git() {
     setopt promptsubst
     autoload -Uz vcs_info
 
+    branch_name=$(git symbolic-ref HEAD --short 2> /dev/null)
+    tag=$(git describe --exact-match --tags HEAD 2> /dev/null)
+
+    if [[ ! -z "${tag}" ]]; then      
+      tag=" (${tag})"
+    fi
+
     zstyle ':vcs_info:*' enable git
     zstyle ':vcs_info:*' get-revision true
     zstyle ':vcs_info:*' check-for-changes true
@@ -133,7 +140,7 @@ prompt_git() {
     zstyle ':vcs_info:*' formats ' %u%c'
     zstyle ':vcs_info:*' actionformats ' %u%c'
     vcs_info
-    echo -n "${ref/refs\/heads\//$PL_BRANCH_CHAR }${vcs_info_msg_0_%% }${mode}"
+    echo -n "${PL_BRANCH_CHAR} ${branch_name}${tag}${vcs_info_msg_0_%% }${mode}"
   fi
 }
 
