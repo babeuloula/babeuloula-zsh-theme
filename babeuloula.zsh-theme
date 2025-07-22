@@ -39,6 +39,11 @@ case ${SOLARIZED_THEME:-dark} in
     *)     CURRENT_FG='black';;
 esac
 
+# Variables for execution time tracking
+typeset -F SECONDS
+CMD_START_TIME=""
+CMD_EXEC_TIME=""
+
 # Special Powerline characters
 
 () {
@@ -54,6 +59,21 @@ esac
   # escape sequence with a single literal character.
   # Do not change this! Do not make it '\u2b80'; that is the old, wrong code point.
   SEGMENT_SEPARATOR=$'\ue0b0'
+}
+
+# Function to capture command start time
+preexec() {
+  CMD_START_TIME=$SECONDS
+}
+
+# Function to calculate execution time after command completion
+precmd() {
+  if [[ -n $CMD_START_TIME ]]; then
+    CMD_EXEC_TIME=$((SECONDS - CMD_START_TIME))
+    CMD_START_TIME=""
+  else
+    CMD_EXEC_TIME=""
+  fi
 }
 
 # Begin a segment
@@ -85,6 +105,51 @@ prompt_end() {
 
 ### Prompt components
 # Each component will draw itself, and hide itself if no information needs to be shown
+
+# Time: current time
+prompt_time() {
+  local current_time=$(date '+%H:%M:%S')
+  prompt_segment cyan black "🕐 $current_time"
+}
+
+# Execution time: show command execution time if available
+prompt_exec_time() {
+  if [[ -n $CMD_EXEC_TIME ]] && (( CMD_EXEC_TIME > 0.1 )); then
+    local exec_time_formatted
+    
+    if (( CMD_EXEC_TIME >= 60 )); then
+      # More than a minute: convert to integer seconds first
+      local total_seconds=$(( ${CMD_EXEC_TIME%.*} ))  # Get integer part only
+      local minutes=$((total_seconds / 60))
+      local remaining_seconds=$((total_seconds % 60))
+      exec_time_formatted="${minutes}m ${remaining_seconds}s"
+    elif (( CMD_EXEC_TIME >= 1 )); then
+      # More than a second: display with max 2 decimals, remove trailing zeros
+      local formatted_time=$(LC_NUMERIC=C printf "%.2f" $CMD_EXEC_TIME)
+      # Remove trailing zeros and decimal point if not needed
+      formatted_time=${formatted_time%00}
+      formatted_time=${formatted_time%.0}
+      formatted_time=${formatted_time%0}
+      if [[ $formatted_time == *.  ]]; then
+        formatted_time=${formatted_time%.}
+      fi
+      exec_time_formatted="${formatted_time}s"
+    else
+      # Less than a second: display in milliseconds
+      local ms=$(( ${CMD_EXEC_TIME%.*} * 1000 + ${CMD_EXEC_TIME#*.} / 1000 ))
+      exec_time_formatted="${ms}ms"
+    fi
+    
+    # Change color based on execution time
+    if (( CMD_EXEC_TIME >= 10 )); then
+      prompt_segment red white "⏱  $exec_time_formatted"
+    elif (( CMD_EXEC_TIME >= 3 )); then
+      prompt_segment yellow black "⏱  $exec_time_formatted"
+    else
+      prompt_segment green black "⏱  $exec_time_formatted"
+    fi
+  fi
+}
 
 # Context: user@hostname (who am I and where am I)
 prompt_context() {
@@ -245,6 +310,8 @@ prompt_newline() {
 build_prompt() {
   RETVAL=$?
   prompt_status
+  prompt_time
+  prompt_exec_time
   prompt_context
   prompt_virtualenv
   prompt_dir
