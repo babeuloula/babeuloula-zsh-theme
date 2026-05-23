@@ -39,6 +39,11 @@ case ${SOLARIZED_THEME:-dark} in
     *)     CURRENT_FG='black';;
 esac
 
+# Configurable icons — override in .zshrc before sourcing oh-my-zsh
+# Set to empty string to disable: ZSH_THEME_BABEULOULA_CLOCK_ICON=""
+: ${ZSH_THEME_BABEULOULA_CLOCK_ICON:="🕐"}
+: ${ZSH_THEME_BABEULOULA_TIMER_ICON:="⏱"}
+
 # Variables for execution time tracking
 typeset -F SECONDS
 CMD_START_TIME=""
@@ -61,13 +66,11 @@ CMD_EXEC_TIME=""
   SEGMENT_SEPARATOR=$'\ue0b0'
 }
 
-# Function to capture command start time
-preexec() {
+function _babeuloula_preexec() {
   CMD_START_TIME=$SECONDS
 }
 
-# Function to calculate execution time after command completion
-precmd() {
+function _babeuloula_precmd() {
   if [[ -n $CMD_START_TIME ]]; then
     CMD_EXEC_TIME=$((SECONDS - CMD_START_TIME))
     CMD_START_TIME=""
@@ -75,6 +78,10 @@ precmd() {
     CMD_EXEC_TIME=""
   fi
 }
+
+autoload -Uz add-zsh-hook
+add-zsh-hook preexec _babeuloula_preexec
+add-zsh-hook precmd  _babeuloula_precmd
 
 # Begin a segment
 # Takes two arguments, background and foreground. Both can be omitted,
@@ -109,7 +116,7 @@ prompt_end() {
 # Time: current time
 prompt_time() {
   local current_time=$(date '+%H:%M:%S')
-  prompt_segment cyan black "🕐 $current_time"
+  prompt_segment cyan black "${ZSH_THEME_BABEULOULA_CLOCK_ICON:+$ZSH_THEME_BABEULOULA_CLOCK_ICON }$current_time"
 }
 
 # Execution time: show command execution time if available
@@ -136,11 +143,11 @@ prompt_exec_time() {
     
     # Change color based on execution time
     if (( CMD_EXEC_TIME >= 10 )); then
-      prompt_segment red white "⏱ $exec_time_formatted"
+      prompt_segment red white "${ZSH_THEME_BABEULOULA_TIMER_ICON:+$ZSH_THEME_BABEULOULA_TIMER_ICON }$exec_time_formatted"
     elif (( CMD_EXEC_TIME >= 3 )); then
-      prompt_segment yellow black "⏱ $exec_time_formatted"
+      prompt_segment yellow black "${ZSH_THEME_BABEULOULA_TIMER_ICON:+$ZSH_THEME_BABEULOULA_TIMER_ICON }$exec_time_formatted"
     else
-      prompt_segment green black "⏱ $exec_time_formatted"
+      prompt_segment green black "${ZSH_THEME_BABEULOULA_TIMER_ICON:+$ZSH_THEME_BABEULOULA_TIMER_ICON }$exec_time_formatted"
     fi
   fi
 }
@@ -247,10 +254,10 @@ prompt_hg() {
       st=""
       rev=$(hg id -n 2>/dev/null | sed 's/[^-0-9]//g')
       branch=$(hg id -b 2>/dev/null)
-      if `hg st | grep -q "^\?"`; then
+      if hg st | grep -q "^[?]"; then
         prompt_segment red black
         st='±'
-      elif `hg st | grep -q "^[MA]"`; then
+      elif hg st | grep -q "^[MA]"; then
         prompt_segment yellow black
         st='±'
       else
