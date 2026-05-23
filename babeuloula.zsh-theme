@@ -119,34 +119,28 @@ prompt_exec_time() {
     
     if (( CMD_EXEC_TIME >= 60 )); then
       # More than a minute: convert to integer seconds first
-      local total_seconds=$(( ${CMD_EXEC_TIME%.*} ))  # Get integer part only
+      local total_seconds=${CMD_EXEC_TIME%.*}
       local minutes=$((total_seconds / 60))
       local remaining_seconds=$((total_seconds % 60))
       exec_time_formatted="${minutes}m ${remaining_seconds}s"
     elif (( CMD_EXEC_TIME >= 1 )); then
-      # More than a second: display with max 2 decimals, remove trailing zeros
       local formatted_time=$(LC_NUMERIC=C printf "%.2f" $CMD_EXEC_TIME)
-      # Remove trailing zeros and decimal point if not needed
-      formatted_time=${formatted_time%00}
-      formatted_time=${formatted_time%.0}
       formatted_time=${formatted_time%0}
-      if [[ $formatted_time == *.  ]]; then
-        formatted_time=${formatted_time%.}
-      fi
+      formatted_time=${formatted_time%0}
+      formatted_time=${formatted_time%.}
       exec_time_formatted="${formatted_time}s"
     else
-      # Less than a second: display in milliseconds
-      local ms=$(( ${CMD_EXEC_TIME%.*} * 1000 + ${CMD_EXEC_TIME#*.} / 1000 ))
+      local ms=$(LC_NUMERIC=C printf "%.0f" $(( CMD_EXEC_TIME * 1000 )))
       exec_time_formatted="${ms}ms"
     fi
     
     # Change color based on execution time
     if (( CMD_EXEC_TIME >= 10 )); then
-      prompt_segment red white "⏱  $exec_time_formatted"
+      prompt_segment red white "⏱ $exec_time_formatted"
     elif (( CMD_EXEC_TIME >= 3 )); then
-      prompt_segment yellow black "⏱  $exec_time_formatted"
+      prompt_segment yellow black "⏱ $exec_time_formatted"
     else
-      prompt_segment green black "⏱  $exec_time_formatted"
+      prompt_segment green black "⏱ $exec_time_formatted"
     fi
   fi
 }
